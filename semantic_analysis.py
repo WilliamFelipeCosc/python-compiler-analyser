@@ -228,6 +228,78 @@ def gerar_grafo_arvore_semantica(tree):
     adicionar_no(tree)
     dot.render('./images/arvore_semantica.png', cleanup=True, format='png')
 
+def gerar_grafo_fluxo_de_controle(tree):
+    """
+    Gera um grafo de fluxo de controle simplificado do código Python analisado.
+    """
+    dot = Digraph(comment='Fluxo de Controle')
+    contador = {'id': 0}
+
+    def adicionar_bloco(node, parent_id=None):
+        node_id = str(contador['id'])
+        contador['id'] += 1
+
+        if isinstance(node, ast.If):
+            label = f"If (linha {node.lineno})"
+        elif isinstance(node, ast.For):
+            label = f"For (linha {node.lineno})"
+        elif isinstance(node, ast.While):
+            label = f"While (linha {node.lineno})"
+        elif isinstance(node, ast.FunctionDef):
+            label = f"Função: {node.name} (linha {node.lineno})"
+        elif isinstance(node, ast.Return):
+            label = f"Return (linha {node.lineno})"
+        elif isinstance(node, ast.Break):
+            label = f"Break (linha {node.lineno})"
+        elif isinstance(node, ast.Continue):
+            label = f"Continue (linha {node.lineno})"
+        else:
+            label = type(node).__name__
+
+        dot.node(node_id, label)
+        if parent_id is not None:
+            dot.edge(parent_id, node_id)
+
+        # Fluxo para blocos de controle
+        if isinstance(node, ast.If):
+            # Corpo do if
+            last_id = node_id
+            for n in node.body:
+                last_id = adicionar_bloco(n, last_id)
+            # Else
+            if node.orelse:
+                else_id = str(contador['id'])
+                dot.node(else_id, "else")
+                dot.edge(node_id, else_id)
+                contador['id'] += 1
+                last_else_id = else_id
+                for n in node.orelse:
+                    last_else_id = adicionar_bloco(n, last_else_id)
+            return node_id
+        elif isinstance(node, (ast.For, ast.While)):
+            last_id = node_id
+            for n in node.body:
+                last_id = adicionar_bloco(n, last_id)
+            # Orelse do for/while
+            if hasattr(node, 'orelse') and node.orelse:
+                orelse_id = str(contador['id'])
+                dot.node(orelse_id, "orelse")
+                dot.edge(node_id, orelse_id)
+                contador['id'] += 1
+                last_orelse_id = orelse_id
+                for n in node.orelse:
+                    last_orelse_id = adicionar_bloco(n, last_orelse_id)
+            return node_id
+        elif hasattr(node, 'body') and isinstance(node.body, list):
+            last_id = node_id
+            for n in node.body:
+                last_id = adicionar_bloco(n, last_id)
+            return last_id
+        return node_id
+
+    adicionar_bloco(tree)
+    dot.render('./images/fluxo_de_controle.png', cleanup=True, format='png')
+
 # No bloco principal, adicione:
 if __name__ == "__main__":
     analisar_codigo("main.py")
@@ -238,3 +310,5 @@ if __name__ == "__main__":
     exibir_arvore_semantica(tree)
     print("\nGerando gráfico da árvore semântica...")
     gerar_grafo_arvore_semantica(tree)
+    print("\nGerando gráfico do fluxo de controle...")
+    gerar_grafo_fluxo_de_controle(tree)
