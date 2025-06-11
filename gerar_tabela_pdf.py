@@ -56,5 +56,5 @@ if __name__ == "__main__":
     with open("main.py", "r", encoding="utf-8") as f:
         codigo = f.read()
     tokens = analisar_lexico(codigo)
-    gerar_pdf_tabela(tokens)
-    gerar_docx_tabela(tokens)
+    gerar_pdf_tabela(tokens, './images/tabela_tokens.pdf')
+    gerar_docx_tabela(tokens, './images/tabela_tokens.docx')
